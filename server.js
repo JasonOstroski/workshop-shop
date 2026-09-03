@@ -36,10 +36,19 @@ async function route(req, res, url) {
   if (url.pathname === '/api/checkout' && req.method === 'POST') {
     const input = await readBody(req); const items = await cart(userId); if (!items.length) return send(res, 400, { error: 'Your cart is empty' });
     const totalCents = items.reduce((total, item) => total + item.product.priceCents * item.quantity, 0);
-    const payment = await fetch(`${paymentUrl}/charge`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ amountCents: totalCents, email: input.email, cardLast4: input.cardNumber?.slice(-4) }) }).then(response => response.json());
+    const orderId = `order_${randomUUID().slice(0, 8)}`;
+    const charge = attempt => {
+      const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), 150);
+      return fetch(`${paymentUrl}/charge`, { method: 'POST', signal: controller.signal, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ amountCents: totalCents, email: input.email, orderId, attempt, cardLast4: input.cardNumber?.slice(-4) }) }).then(response => response.json()).finally(() => clearTimeout(timeout));
+    };
+    let payment;
+    try { payment = await charge(1); } catch (error) {
+      console.error(JSON.stringify({ event: 'payment_timeout_retrying', orderId, reason: error.name }));
+      payment = await charge(2);
+    }
     if (payment.status !== 'approved') return send(res, 402, { error: 'Payment was declined' });
     await database(`/carts?user_id=eq.${encodeURIComponent(userId)}`, { method: 'DELETE' });
-    return send(res, 200, { orderId: `order_${randomUUID().slice(0, 8)}`, totalCents, payment, shipping: input.shipping });
+    return send(res, 200, { orderId, totalCents, payment, shipping: input.shipping });
   }
   if (['/', '/index.html', '/cart', '/checkout'].includes(url.pathname)) return send(res, 200, fs.readFileSync(path.join(__dirname, 'frontend/index.html'), 'utf8'), 'text/html');
   if (url.pathname === '/app.js') return send(res, 200, fs.readFileSync(path.join(__dirname, 'frontend/app.js'), 'utf8'), 'text/javascript');

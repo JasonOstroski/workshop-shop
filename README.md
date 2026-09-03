@@ -15,3 +15,10 @@ Open http://localhost:8088. The stack has four services: shop, payment, PostgreS
 Edit `frontend/index.html`, `frontend/app.js`, or `frontend/styles.css`, then refresh the browser. Edit `server.js` or `payment.js`, then restart only the relevant Node container.
 
 PostgreSQL is initialized from `db/init.sql`. Reset it with `docker compose down -v`. The payment service approves every non-zero charge and is intentionally for teaching only.
+
+## Scenario branch
+
+The `scenario/payment-duplicate` branch intentionally times out the first
+payment response after the payment has already been created. Checkout retries,
+creating a second transaction for the same order. Payment logs expose
+`orderId`, `transactionId`, `attempt`, and `duplicateOf` as structured fields.
