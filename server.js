@@ -19,7 +19,15 @@ const send = (res, status, value, type = 'application/json') => { res.writeHead(
 const readBody = req => new Promise((resolve, reject) => { let value = ''; req.on('data', chunk => { value += chunk; }); req.on('end', () => resolve(value ? JSON.parse(value) : {})); req.on('error', reject); });
 const database = (url, options) => fetch(`${postgrestUrl}${url}`, { headers: { 'content-type': 'application/json', ...(options?.headers || {}) }, ...options }).then(async response => { const text = await response.text(); const data = text ? JSON.parse(text) : null; if (!response.ok) throw new Error(data?.message || data?.details || `Database request failed: ${response.status}`); return data; });
 const mapProduct = product => ({ ...product, priceCents: product.price_cents, price_cents: undefined });
-const cart = userId => database(`/carts?user_id=eq.${encodeURIComponent(userId)}&select=quantity,products(*)`).then(items => items.map(item => ({ product: mapProduct(item.products), quantity: item.quantity })));
+const cart = async userId => {
+  const rows = await database(`/carts?user_id=eq.${encodeURIComponent(userId)}&select=product_id,quantity`);
+  const items = await Promise.all(rows.map(async row => {
+    const products = await database(`/products?id=eq.${encodeURIComponent(row.product_id)}&select=*`);
+    return { product: mapProduct(products[0]), quantity: row.quantity };
+  }));
+  console.log(JSON.stringify({ event: 'cart_product_lookups', userId, cartItems: rows.length, productQueries: rows.length, queryPattern: 'N+1' }));
+  return items;
+};
 
 async function route(req, res, url) {
   if (url.pathname === '/health') return send(res, 200, { status: 'ok', service: 'shop-api' });
