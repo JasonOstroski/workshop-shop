@@ -1,15 +1,20 @@
 services:
   shop:
     image: docker.io/library/node:22-alpine
+    network_mode: host
     command: ["node", "/workshop/server.js"]
-    ports:
-      - "8088:8088"
     environment:
       PORT: 8088
-      POSTGREST_URL: http://postgrest:3000
-      PAYMENT_URL: http://payment:4004
+      POSTGREST_URL: http://localhost:3000
+      PAYMENT_URL: http://localhost:4004
     volumes:
       - ./:/workshop:ro
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:8088/api/products').then(response => { if (!response.ok) process.exit(1); }).catch(() => process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
     depends_on:
       postgrest:
         condition: service_healthy
@@ -18,6 +23,7 @@ services:
 
   payment:
     image: docker.io/library/node:22-alpine
+    network_mode: host
     command: ["node", "/workshop/payment.js"]
     environment:
       PORT: 4004
@@ -31,6 +37,7 @@ services:
 
   postgresql:
     image: docker.io/library/postgres:17-alpine
+    network_mode: host
     environment:
       POSTGRES_DB: shop
       POSTGRES_USER: shop
@@ -46,8 +53,10 @@ services:
 
   postgrest:
     image: docker.io/postgrest/postgrest:v12.2.12
+    network_mode: host
     environment:
-      PGRST_DB_URI: postgres://shop:shop@postgresql:5432/shop
+      PGRST_SERVER_HOST: 0.0.0.0
+      PGRST_DB_URI: postgres://shop:shop@localhost:5432/shop
       PGRST_DB_SCHEMAS: public
       PGRST_DB_ANON_ROLE: web_anon
       PGRST_JWT_SECRET: workshop-only-secret
@@ -55,17 +64,18 @@ services:
       postgresql:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "pgrep postgrest >/dev/null"]
+      test: ["CMD", "postgrest", "--version"]
       interval: 5s
       timeout: 3s
       retries: 20
 
   load-generator:
     image: docker.io/grafana/k6:0.55.0
+    network_mode: host
     profiles: [loadgen]
     command: ["run", "/scripts/smoke.js"]
     environment:
-      TARGET_URL: http://shop:8088
+      TARGET_URL: http://localhost:8088
       VUS: 10
       DURATION: 60s
     volumes:

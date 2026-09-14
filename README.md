@@ -19,7 +19,9 @@ the repository in a Codespace, then run:
 make up
 ```
 
-When the command finishes, open the forwarded port `8088` from the Ports panel.
+`make up` waits for PostgreSQL, PostgREST, payment, and the catalog endpoint to
+be ready before returning. When it finishes, open the forwarded port `8088` from
+the Ports panel or visit http://localhost:8088.
 The shop source is bind-mounted into the Node containers, so edits to the
 frontend are visible after a browser refresh. Restart the stack after editing
 `server.js` or `payment.js`:
@@ -27,6 +29,16 @@ frontend are visible after a browser refresh. Restart the stack after editing
 ```bash
 make down && make up
 ```
+
+For a completely clean first start, including a fresh PostgreSQL volume, run:
+
+```bash
+make clean
+```
+
+Use `make reset` when you only need to remove the database volume. The init
+script runs only when that volume is created, so changing `db/init.sql` requires
+`make reset` or `make clean` before starting again.
 
 Start generated traffic in another terminal with:
 
