@@ -17,7 +17,7 @@ const products = [
 
 const send = (res, status, value, type = 'application/json') => { res.writeHead(status, { 'content-type': type }); res.end(type === 'application/json' ? JSON.stringify(value) : value); };
 const readBody = req => new Promise((resolve, reject) => { let value = ''; req.on('data', chunk => { value += chunk; }); req.on('end', () => resolve(value ? JSON.parse(value) : {})); req.on('error', reject); });
-const database = (url, options) => fetch(`${postgrestUrl}${url}`, { headers: { 'content-type': 'application/json', ...(options?.headers || {}) }, ...options }).then(async response => { const text = await response.text(); const data = text ? JSON.parse(text) : null; if (!response.ok) throw new Error(data?.message || data?.details || `Database request failed: ${response.status}`); return data; });
+const database = (url, options = {}) => fetch(`${postgrestUrl}${url}`, { ...options, headers: { accept: 'application/json', 'content-type': 'application/json', ...(options.headers || {}) } }).then(async response => { const text = await response.text(); let data = null; try { data = text ? JSON.parse(text) : null; } catch { data = { message: text }; } if (!response.ok) throw new Error(data?.message || data?.details || `Database request failed: ${response.status}`); return data; });
 const mapProduct = product => ({ ...product, priceCents: product.price_cents, price_cents: undefined });
 const cart = userId => database(`/carts?user_id=eq.${encodeURIComponent(userId)}&select=quantity,products(*)`).then(items => items.map(item => ({ product: mapProduct(item.products), quantity: item.quantity })));
 
