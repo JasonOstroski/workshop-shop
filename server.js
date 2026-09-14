@@ -18,7 +18,7 @@ const products = [
 
 const send = (res, status, value, type = 'application/json') => { res.writeHead(status, { 'content-type': type }); res.end(type === 'application/json' ? JSON.stringify(value) : value); };
 const readBody = req => new Promise((resolve, reject) => { let value = ''; req.on('data', chunk => { value += chunk; }); req.on('end', () => resolve(value ? JSON.parse(value) : {})); req.on('error', reject); });
-const database = async (url, options) => {
+const database = async (url, options = {}) => {
   const connection = databasePool.pop();
   if (!connection) {
     console.error(JSON.stringify({ event: 'database_pool_exhausted', poolSize: 2, databaseUrl: url }));
@@ -26,8 +26,8 @@ const database = async (url, options) => {
   }
   try {
     await new Promise(resolve => setTimeout(resolve, 250));
-    const response = await fetch(`${postgrestUrl}${url}`, { headers: { 'content-type': 'application/json', ...(options?.headers || {}) }, ...options });
-    const text = await response.text(); const data = text ? JSON.parse(text) : null;
+    const response = await fetch(`${postgrestUrl}${url}`, { ...options, headers: { accept: 'application/json', 'content-type': 'application/json', ...(options.headers || {}) } });
+    const text = await response.text(); let data = null; try { data = text ? JSON.parse(text) : null; } catch { data = { message: text }; }
     if (!response.ok) throw new Error(data?.message || data?.details || `Database request failed: ${response.status}`);
     return data;
   } finally {
