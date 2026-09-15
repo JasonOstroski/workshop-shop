@@ -25,20 +25,30 @@ Shop is ready at http://localhost:8088
 Open http://localhost:8088 after startup. To stop the stack without deleting the
 database volume, run `make down`.
 
-### Optional Bluebox telemetry
+### Bluebox telemetry before startup
 
 The app runs normally without telemetry credentials. To export traces, metrics, and
-structured application logs to Bluebox, set the values from the Bluebox Setup page in
-the same terminal before starting the stack. Never commit the header value or paste it
+structured application logs to Bluebox, configure the endpoint and ingest header
+before starting the stack. Use the values from the Bluebox Setup page in the same
+terminal where you will run `make clean`. Never commit the header value or paste it
 into chat:
 
 ```bash
+# The endpoint can be resolved by the Bluebox CLI.
 export OTEL_EXPORTER_OTLP_ENDPOINT="$(bluebox otlp-endpoint)"
+# Paste the complete OTLP header value from Bluebox Setup; do not include angle brackets.
 export OTEL_EXPORTER_OTLP_HEADERS="<header value from Bluebox Setup>"
 make clean
 ```
 
-The containers read these variables only when they start. Restart the stack after
+The startup order is:
+
+1. Set `OTEL_EXPORTER_OTLP_ENDPOINT`.
+2. Set `OTEL_EXPORTER_OTLP_HEADERS` with the Bluebox ingest token/header.
+3. Run `make clean` or `make up` in that same terminal.
+4. Generate application traffic so spans, metrics, and logs are exported.
+
+The containers read these variables only when they start, so restart the stack after
 changing them. If they are unset, OTel export is disabled and the app still starts.
 
 Run the complete local stack from this directory:
