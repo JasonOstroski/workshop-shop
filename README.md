@@ -68,7 +68,11 @@ make up
 
 `make up` waits for PostgreSQL, PostgREST, payment, and the catalog endpoint to
 be ready before returning. When it finishes, open the forwarded port `8088` from
-the Ports panel or visit http://localhost:8088.
+the Ports panel. If port `8088` is not listed, choose **Forward a Port** in the
+Ports panel and enter `8088`, then open the generated **Forwarded Address**. The
+browser URL will look like
+`https://<codespace-name>-8088.app.github.dev`; `http://localhost:8088` only
+works from inside the Codespace.
 The shop source is bind-mounted into the Node containers, so edits to the
 frontend are visible after a browser refresh. Restart the stack after editing
 `server.js` or `payment.js`:
