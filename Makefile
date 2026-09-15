@@ -1,8 +1,26 @@
-.PHONY: up load down reset clean
+.PHONY: deps up load down reset clean
 
-up:
-		docker compose up -d --wait
-		@curl --fail --silent http://localhost:8088/health >/dev/null
+READY_TIMEOUT ?= 120
+
+deps:
+		@if test ! -d node_modules/@opentelemetry/sdk-node; then \
+			echo "Installing Node dependencies..."; \
+			npm ci; \
+		fi
+
+up: deps
+		docker compose up -d
+		@deadline=$$(($$(date +%s) + $(READY_TIMEOUT))); \
+		while ! curl --fail --silent http://localhost:4004/health >/dev/null || \
+			! curl --fail --silent http://localhost:8088/api/products >/dev/null; do \
+			if test $$(date +%s) -ge $$deadline; then \
+				echo "Timed out waiting for payment and shop dependencies." >&2; \
+				docker compose ps; \
+				docker compose logs --tail=40 postgresql postgrest payment shop >&2; \
+				exit 1; \
+			fi; \
+			sleep 2; \
+		done
 		@echo "Shop is ready at http://localhost:8088"
 
 load:

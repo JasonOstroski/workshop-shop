@@ -4,6 +4,43 @@ A small, editable ecommerce application for workshops. It has a browser frontend
 
 ## Run locally
 
+### Clean setup in a new Codespace
+
+From the repository root, run:
+
+```bash
+npm ci
+make clean
+```
+
+`make up` also checks for the OTel Node dependencies and runs `npm ci` automatically
+when they are missing. `make clean` removes and recreates the database volume before
+starting PostgreSQL, PostgREST, payment, and shop, then waits for the real payment
+and catalog endpoints to respond. A successful start ends with:
+
+```text
+Shop is ready at http://localhost:8088
+```
+
+Open http://localhost:8088 after startup. To stop the stack without deleting the
+database volume, run `make down`.
+
+### Optional Bluebox telemetry
+
+The app runs normally without telemetry credentials. To export traces, metrics, and
+structured application logs to Bluebox, set the values from the Bluebox Setup page in
+the same terminal before starting the stack. Never commit the header value or paste it
+into chat:
+
+```bash
+export OTEL_EXPORTER_OTLP_ENDPOINT="$(bluebox otlp-endpoint)"
+export OTEL_EXPORTER_OTLP_HEADERS="<header value from Bluebox Setup>"
+make clean
+```
+
+The containers read these variables only when they start. Restart the stack after
+changing them. If they are unset, OTel export is disabled and the app still starts.
+
 Run the complete local stack from this directory:
 
 ```bash
