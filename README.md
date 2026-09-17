@@ -102,6 +102,21 @@ startup downloads images but does not compile the workshop application.
 
 Open http://localhost:8088. The stack has four services: shop, payment, PostgreSQL, and PostgREST.
 
+The shop database pool defaults to 10 connections and waits up to 1 second for
+an available slot. Requests that remain overloaded receive `503 Service
+Unavailable` with `Retry-After: 1` instead of an application `500`. Tune these
+values for the deployment and database connection limit before production:
+
+```bash
+export DATABASE_POOL_SIZE=10
+export DATABASE_ACQUIRE_TIMEOUT_MS=1000
+export DATABASE_OPERATION_DELAY_MS=0
+make up
+```
+
+`DATABASE_OPERATION_DELAY_MS` is available for reproducing slow database
+operations in load tests and should remain `0` in normal operation.
+
 Run the generated workload in a second terminal:
 
 ```bash
